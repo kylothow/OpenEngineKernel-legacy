@@ -1,7 +1,5 @@
 dtb-$(CONFIG_ARCH_MSM8998) += \
-	dumpling-v2.1-dvt.dtb \
-	dumpling-v2.1-pvt.dtb \
-	dumpling-v2.1-Second_Resource.dtb
+	dumpling-v2.1-dvt.dtb
 
 ifeq ($(CONFIG_ARM64),y)
 always          := $(dtb-y)
