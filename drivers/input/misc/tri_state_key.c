@@ -1,391 +1,346 @@
 /*
+ * drivers/input/misc/tri_state_key.c
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License version 2 as
- *  published by the Free Software Foundation.
+ * Copyright (C) 2018, Sultanxda <sultanxda@gmail.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  */
 
-#include <linux/kernel.h>
-#include <linux/module.h>
-#include <linux/init.h>
-#include <linux/slab.h>
-#include <linux/input.h>
-#include <linux/ioport.h>
-#include <linux/platform_device.h>
 #include <linux/gpio.h>
-#include <linux/gpio_keys.h>
-#include <linux/of_platform.h>
-#include <linux/of_gpio.h>
-
-#include <linux/switch.h>
-#include <linux/workqueue.h>
+#include <linux/input.h>
 #include <linux/interrupt.h>
-#include <asm/uaccess.h>
+#include <linux/kernel.h>
+#include <linux/of_gpio.h>
+#include <linux/platform_device.h>
+#include <linux/proc_fs.h>
+#include <linux/slab.h>
+#include <linux/uaccess.h>
 
-#include <linux/regulator/consumer.h>
+#define DRIVER_NAME "tri-state-key"
 
-#include <linux/timer.h>
-#include <linux/delay.h>
-
-#define DRV_NAME	"tri-state-key"
-
-/*
-	        	KEY1(GPIO1)	KEY2(GPIO92)
-pin1 connect to pin4	0	            1         | MUTE
-pin2 connect to pin5	1	            1         | Do Not Disturb
-pin4 connect to pin3	1	            0         | Normal
-
-*/
-typedef enum
-{
-	MODE_UNKNOWN,
-	MODE_MUTE,
-	MODE_DO_NOT_DISTURB,
-	MODE_NORMAL,
-	MODE_MAX_NUM
-} tri_mode_t;
-
-struct switch_dev_data
-{
-	int irq_key3;
-	int irq_key2;
-	int irq_key1;
-	int key1_gpio;
-	int key2_gpio;
-	int key3_gpio;
-
-	struct regulator *vdd_io;
-
-	struct work_struct work;
-	struct switch_dev sdev;
-	struct device *dev;
-
-	struct timer_list s_timer;
-	struct pinctrl * key_pinctrl;
-	struct pinctrl_state * set_state;
-
+enum key_vals {
+	KEYCODE_TOTAL_SILENCE = 600,
+	KEYCODE_MODE_ALARMS_ONLY,
+	KEYCODE_MODE_PRIORITY_ONLY,
+	KEYCODE_MODE_NONE,
+	KEYCODE_MODE_MAX
 };
 
-static struct switch_dev_data *switch_data;
-static DEFINE_MUTEX(sem);
-static int set_gpio_by_pinctrl(void)
+static const char *const proc_names[] = {
+	"keyCode_top", "keyCode_middle", "keyCode_bottom"
+};
+
+struct tristate_data {
+	struct device *dev;
+	struct input_dev *input;
+	struct mutex irq_lock;
+	enum key_vals key_codes[3];
+	int key_gpios[3];
+	int curr_state;
+};
+
+static struct tristate_data *tdata_g;
+
+static void send_input(struct tristate_data *t, int keycode)
 {
-	return pinctrl_select_state(switch_data->key_pinctrl, switch_data->set_state);
+	input_report_key(t->input, keycode, 1);
+	input_sync(t->input);
+	input_report_key(t->input, keycode, 0);
+	input_sync(t->input);
 }
 
-/*set  3 gpio default state high */
-static int key_pre[3] = {1, 1, 1};
-static int delay_time;
-
-static void switch_dev_work(struct work_struct *work)
+static void tristate_process_state(struct tristate_data *t)
 {
-	int key[3];
-	int i, j;
-	bool have_wrong_key = false;
-	int state_same = 0;
+	int i, key_state = 0;
 
-	msleep(delay_time);
-	key[0] = gpio_get_value(switch_data->key1_gpio);
-	key[1] = gpio_get_value(switch_data->key2_gpio);
-	key[2] = gpio_get_value(switch_data->key3_gpio);
-
-	pr_err("%s ,key[0]=%d,key[1]=%d,key[2]=%d\n",
-	__func__, key[0], key[1], key[2]);
-
-	for (i = 0; i < 3; i++) {
-	/*if 3 gpio status  is the same as before ,ignore them*/
-		if (key_pre[i] == key[i])
-			state_same++;
-		if (state_same == 3)
-			return;
-	}
-
-	for (i = 0; i < 3; i++) {
-	/*
-	*	1,if the gpio key is low ,and previous status is low ,
-	*	we suspect that the gpio is in wrong states
-	*/
-		if (key[i] + key_pre[i] == 0) {
-			pr_err("[sk]key[%d] is in wrong state\n", i);
-			have_wrong_key = true;
-			delay_time = 300;
-			break;
-		}
-	}
-
-	mutex_lock(&sem);
-	if (have_wrong_key == true) {
-		if (key[0]+key[1]+key[2] == 2) {
-			if (i == 0)
-				switch_set_state(
-				&switch_data->sdev,
-				MODE_MUTE);
-			if (i == 1)
-				switch_set_state(
-				&switch_data->sdev,
-				MODE_DO_NOT_DISTURB);
-			if (i == 2)
-				switch_set_state(
-				&switch_data->sdev,
-				MODE_NORMAL);
-			}
-		else {
-			for (j = 0; j < 3; j++) {
-			/* we got the  gpio is wrong state,
-			*  then check which gpio
-			*/
-				if ((key[j] == 0) && (i != j)) {
-					if (j == 0)
-						switch_set_state(
-						&switch_data->sdev,
-						MODE_MUTE);
-					if (j == 1)
-						switch_set_state(
-						&switch_data->sdev,
-						MODE_DO_NOT_DISTURB);
-					if (j == 2)
-						switch_set_state(
-						&switch_data->sdev,
-						MODE_NORMAL);
-				}
-			}
-		}
-	} else {
-		if (!key[0])
-			switch_set_state(
-			&switch_data->sdev,
-			MODE_MUTE);
-		if (!key[1])
-			switch_set_state(
-			&switch_data->sdev,
-			MODE_DO_NOT_DISTURB);
-		if (!key[2])
-			switch_set_state(
-			&switch_data->sdev,
-			MODE_NORMAL);
-		}
+	/* Store the GPIO values of the keys as a bitmap */
 	for (i = 0; i < 3; i++)
-		key_pre[i] = key[i];
+		key_state |= !!gpio_get_value(t->key_gpios[i]) << i;
 
-	pr_err("%s ,tristatekey set to state(%d)\n",
-	__func__, switch_data->sdev.state);
-	mutex_unlock(&sem);
+	/* Spurious interrupt; at least one of the pins should be zero */
+	if (key_state == 0x7)
+		return;
+
+	/* Redundant interrupt */
+	if (key_state == t->curr_state)
+		return;
+
+	t->curr_state = key_state;
+
+	/*
+	 * Find the first bit set to zero; this is the current position. Bit 0
+	 * corresponds to the top position, bit 1 corresponds to the middle
+	 * position, and bit 2 corresponds to the bottom position.
+	 */
+	for (i = 0; i < 3; i++) {
+		if (!(key_state & BIT(i)))
+			break;
+	}
+
+	send_input(t, t->key_codes[i]);
 }
 
-static irqreturn_t switch_dev_interrupt(int irq, void *_dev)
+static irqreturn_t tristate_irq_handler(int irq, void *dev_id)
 {
-	schedule_work(&switch_data->work);
+	struct tristate_data *t = dev_id;
+
+	/* This handler is shared between three interrupt lines */
+	mutex_lock(&t->irq_lock);
+	tristate_process_state(dev_id);
+	mutex_unlock(&t->irq_lock);
+
 	return IRQ_HANDLED;
 }
 
-static void timer_handle(unsigned long arg)
+static int keycode_get_idx(const char *filename)
 {
-	schedule_work(&switch_data->work);
+	int i;
+
+	for (i = 0; i < 3; i++) {
+		if (!strcmp(proc_names[i], filename))
+			break;
+	}
+
+	return i;
 }
 
-#ifdef CONFIG_OF
-static int switch_dev_get_devtree_pdata(struct device *dev)
+static int keycode_show(struct seq_file *seq, void *offset)
 {
-	struct device_node *node;
+	struct tristate_data *t = tdata_g;
+	int idx = (int)(long)seq->private;
 
-	node = dev->of_node;
-	if (!node)
+	seq_printf(seq, "%d\n", t->key_codes[idx]);
+	return 0;
+}
+
+static ssize_t tristate_keycode_write(struct file *file,
+	const char __user *page, size_t count, loff_t *offset)
+{
+	struct tristate_data *t = tdata_g;
+	char buf[sizeof("600")];
+	int data, idx;
+
+	memset(buf, 0, sizeof(buf));
+
+	if (copy_from_user(buf, page, min_t(int, count, 3))) {
+		dev_err(t->dev, "Failed to read procfs input\n");
+		return count;
+	}
+
+	if (kstrtoint(buf, 10, &data) < 0)
+		return count;
+
+	if (data < KEYCODE_TOTAL_SILENCE || data >= KEYCODE_MODE_MAX)
+		return count;
+
+	idx = keycode_get_idx(file->f_path.dentry->d_iname);
+
+	mutex_lock(&t->irq_lock);
+	t->key_codes[idx] = data;
+	if (!(t->curr_state & BIT(idx)))
+		send_input(t, data);
+	mutex_unlock(&t->irq_lock);
+
+	return count;
+}
+
+static int tristate_keycode_open(struct inode *inode, struct file *file)
+{
+	int idx = keycode_get_idx(file->f_path.dentry->d_iname);
+
+	/* Pass the index to keycode_show */
+	return single_open(file, keycode_show, (void *)(long)idx);
+}
+
+static const struct file_operations tristate_keycode_proc = {
+	.owner		= THIS_MODULE,
+	.open		= tristate_keycode_open,
+	.read		= seq_read,
+	.write		= tristate_keycode_write,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int tristate_parse_dt(struct tristate_data *t)
+{
+	struct device_node *np;
+	char prop_name[sizeof("tristate,gpio_key#")];
+	int i;
+
+	np = t->dev->of_node;
+	if (!np)
 		return -EINVAL;
 
-	switch_data->key3_gpio= of_get_named_gpio(node, "tristate,gpio_key3", 0);
-	if ((!gpio_is_valid(switch_data->key3_gpio)))
-		return -EINVAL;
-	pr_err("switch_data->key3_gpio=%d \n", switch_data->key3_gpio);
+	for (i = 0; i < 3; i++) {
+		sprintf(prop_name, "tristate,gpio_key%d", i + 1);
 
-	switch_data->key2_gpio= of_get_named_gpio(node, "tristate,gpio_key2", 0);
-	if ((!gpio_is_valid(switch_data->key2_gpio)))
-		return -EINVAL;
-	pr_err("switch_data->key2_gpio=%d \n", switch_data->key2_gpio);
-
-	switch_data->key1_gpio= of_get_named_gpio(node, "tristate,gpio_key1", 0);
-	if ((!gpio_is_valid(switch_data->key1_gpio)))
-		return -EINVAL;
-	pr_err("switch_data->key1_gpio=%d \n", switch_data->key1_gpio);
+		t->key_gpios[i] = of_get_named_gpio(np, prop_name, 0);
+		if (!gpio_is_valid(t->key_gpios[i])) {
+			dev_err(t->dev, "Invalid %s property\n", prop_name);
+			return -EINVAL;
+		}
+	}
 
 	return 0;
 }
-#else
-static inline int
-switch_dev_get_devtree_pdata(struct device *dev)
+
+static int tristate_register_irqs(struct tristate_data *t)
 {
-	pr_info("%s inline function", __func__);
+	char label[sizeof("tristate_key#-int")];
+	int i, j, key_irqs[3], ret;
+
+	/* Get the IRQ numbers corresponding to the GPIOs */
+	for (i = 0; i < 3; i++) {
+		key_irqs[i] = gpio_to_irq(t->key_gpios[i]);
+		if (key_irqs[i] < 0) {
+			dev_err(t->dev, "Invalid IRQ (%d) for GPIO%d\n",
+				key_irqs[i], i + 1);
+			return -EINVAL;
+		}
+	}
+
+	for (i = 0; i < 3; i++) {
+		sprintf(label, "tristate_key%d-int", i + 1);
+
+		ret = gpio_request(t->key_gpios[i], label);
+		if (ret < 0) {
+			dev_err(t->dev, "Failed to request GPIO%d, ret: %d\n",
+				i + 1, ret);
+			goto free_gpios;
+		}
+
+		ret = gpio_direction_input(t->key_gpios[i]);
+		if (ret < 0) {
+			dev_err(t->dev, "Failed to set GPIO%d dir, ret: %d\n",
+				i + 1, ret);
+			goto free_gpios;
+		}
+
+		sprintf(label, "tristate_key%d", i + 1);
+
+		ret = request_threaded_irq(key_irqs[i], NULL,
+				tristate_irq_handler,
+				IRQF_TRIGGER_FALLING | IRQF_ONESHOT, label, t);
+		if (ret < 0) {
+			dev_err(t->dev, "Failed to register %s IRQ, ret: %d\n",
+				label, ret);
+			goto free_irqs;
+		}
+	}
+
+	for (i = 0; i < 3; i++)
+		enable_irq_wake(key_irqs[i]);
+
 	return 0;
+
+free_irqs:
+	for (j = i; j--;)
+		free_irq(key_irqs[j], t);
+	i = 3;
+free_gpios:
+	for (j = i; j--;)
+		gpio_free(t->key_gpios[j]);
+	return -EINVAL;
 }
-#endif
 
-static int tristate_dev_probe(struct platform_device *pdev)
+static void tristate_create_procfs(void)
 {
-	struct device *dev;
-	int ret = 0;
+	struct proc_dir_entry *proc_dir;
+	int i;
 
-	dev= &pdev->dev;
+	proc_dir = proc_mkdir("tri-state-key", NULL);
+	if (!proc_dir)
+		return;
 
-	switch_data = kzalloc(sizeof(struct switch_dev_data), GFP_KERNEL);
-	if (!switch_data)
+	for (i = 0; i < 3; i++)
+		proc_create_data(proc_names[i], 0644, proc_dir,
+			&tristate_keycode_proc, NULL);
+}
+
+static int tristate_probe(struct platform_device *pdev)
+{
+	struct tristate_data *t;
+	int i, ret;
+
+	t = kzalloc(sizeof(*t), GFP_KERNEL);
+	if (!t)
 		return -ENOMEM;
 
-	switch_data->dev = dev;
-	switch_data->sdev.name = DRV_NAME;
+	t->dev = &pdev->dev;
+	tdata_g = t;
 
-	switch_data->key_pinctrl = devm_pinctrl_get(switch_data->dev);
-	if (IS_ERR_OR_NULL(switch_data->key_pinctrl)) {
-		dev_err(switch_data->dev, "Failed to get pinctrl \n");
-		goto err_switch_dev_register;
-	}
-	switch_data->set_state = pinctrl_lookup_state(switch_data->key_pinctrl,
-		"pmx_tri_state_key_active");
-	if (IS_ERR_OR_NULL(switch_data->set_state)) {
-		dev_err(switch_data->dev, "Failed to lookup_state \n");
-		goto err_switch_dev_register;
-	}
+	ret = tristate_parse_dt(t);
+	if (ret)
+		goto free_t;
 
-	set_gpio_by_pinctrl();
-
-	ret = switch_dev_get_devtree_pdata(dev);
-	if (ret) {
-		dev_err(dev, "parse device tree fail!!!\n");
-		goto err_switch_dev_register;
+	t->input = input_allocate_device();
+	if (!t->input) {
+		dev_err(t->dev, "Failed to allocate input device\n");
+		ret = -ENOMEM;
+		goto free_t;
 	}
 
-	ret = switch_dev_register(&switch_data->sdev);
-	if (ret < 0)
-		goto err_switch_dev_register;
+	t->input->name = DRIVER_NAME;
+	t->input->dev.parent = t->dev;
+	input_set_drvdata(t->input, t);
 
-	//config irq gpio and request irq
-	ret = gpio_request(switch_data->key1_gpio, "tristate_key1");
-	if (ret < 0)
-		goto err_request_gpio;
+	set_bit(EV_KEY, t->input->evbit);
+	set_bit(KEYCODE_TOTAL_SILENCE, t->input->keybit);
+	set_bit(KEYCODE_MODE_ALARMS_ONLY, t->input->keybit);
+	set_bit(KEYCODE_MODE_PRIORITY_ONLY, t->input->keybit);
+	set_bit(KEYCODE_MODE_NONE, t->input->keybit);
 
-	ret = gpio_direction_input(switch_data->key1_gpio);
-	if (ret < 0)
-		goto err_set_gpio_input;
+	ret = input_register_device(t->input);
+	if (ret)
+		goto free_input;
 
-	switch_data->irq_key1 = gpio_to_irq(switch_data->key1_gpio);
-	if (switch_data->irq_key1 < 0) {
-		ret = switch_data->irq_key1;
-		goto err_detect_irq_num_failed;
-	}
+	/* Initialize with default keycodes */
+	for (i = 0; i < 3; i++)
+		t->key_codes[i] = KEYCODE_TOTAL_SILENCE + i;
 
-	ret = request_irq(switch_data->irq_key1, switch_dev_interrupt,
-		IRQF_TRIGGER_FALLING|IRQF_TRIGGER_RISING,
-		"tristate_key1", switch_data);
-	if (ret < 0)
-		goto err_request_irq;
+	/* Process initial state */
+	tristate_process_state(t);
 
-	ret = gpio_request(switch_data->key2_gpio,
-		"tristate_key2");
-	if (ret < 0)
-		goto err_request_gpio;
+	mutex_init(&t->irq_lock);
+	ret = tristate_register_irqs(t);
+	if (ret)
+		goto input_unregister;
 
-	ret = gpio_direction_input(switch_data->key2_gpio);
-	if (ret < 0)
-		goto err_set_gpio_input;
-
-	switch_data->irq_key2 = gpio_to_irq(switch_data->key2_gpio);
-	if (switch_data->irq_key2 < 0) {
-		ret = switch_data->irq_key2;
-		goto err_detect_irq_num_failed;
-	}
-
-	ret = request_irq(switch_data->irq_key2, switch_dev_interrupt,
-		IRQF_TRIGGER_FALLING|IRQF_TRIGGER_RISING,
-		"tristate_key2", switch_data);
-	if (ret < 0)
-		goto err_request_irq;
-
-	ret = gpio_request(switch_data->key3_gpio,
-		"tristate_key3");
-	if (ret < 0)
-		goto err_request_gpio;
-
-	ret = gpio_direction_input(switch_data->key3_gpio);
-	if (ret < 0)
-		goto err_set_gpio_input;
-
-	switch_data->irq_key3 = gpio_to_irq(switch_data->key3_gpio);
-	if (switch_data->irq_key3 < 0) {
-		ret = switch_data->irq_key3;
-		goto err_detect_irq_num_failed;
-	}
-
-	ret = request_irq(switch_data->irq_key3, switch_dev_interrupt,
-		IRQF_TRIGGER_FALLING|IRQF_TRIGGER_RISING,
-		"tristate_key3", switch_data);
-	if (ret < 0)
-		goto err_request_irq;
-
-	INIT_WORK(&switch_data->work, switch_dev_work);
-
-	init_timer(&switch_data->s_timer);
-	switch_data->s_timer.function = &timer_handle;
-	switch_data->s_timer.expires = jiffies + 5*HZ;
-
-	add_timer(&switch_data->s_timer);
-
-	enable_irq_wake(switch_data->irq_key1);
-	enable_irq_wake(switch_data->irq_key2);
-	enable_irq_wake(switch_data->irq_key3);
-
+	tristate_create_procfs();
 	return 0;
 
-err_request_gpio:
-	switch_dev_unregister(&switch_data->sdev);
-err_request_irq:
-err_detect_irq_num_failed:
-err_set_gpio_input:
-	gpio_free(switch_data->key2_gpio);
-	gpio_free(switch_data->key1_gpio);
-	gpio_free(switch_data->key3_gpio);
-err_switch_dev_register:
-	kfree(switch_data);
-
+input_unregister:
+	input_unregister_device(t->input);
+free_input:
+	input_free_device(t->input);
+free_t:
+	kfree(t);
 	return ret;
 }
 
-static int tristate_dev_remove(struct platform_device *pdev)
-{
-	cancel_work_sync(&switch_data->work);
-	gpio_free(switch_data->key1_gpio);
-	gpio_free(switch_data->key2_gpio);
-	gpio_free(switch_data->key3_gpio);
-	switch_dev_unregister(&switch_data->sdev);
-	kfree(switch_data);
-
-	return 0;
-}
-#ifdef CONFIG_OF
-static struct of_device_id tristate_dev_of_match[] =
-{
+static const struct of_device_id tristate_of_match[] = {
 	{ .compatible = "oneplus,tri-state-key", },
 	{ },
 };
-MODULE_DEVICE_TABLE(of, tristate_dev_of_match);
-#endif
 
-static struct platform_driver tristate_dev_driver = {
-	.probe		= tristate_dev_probe,
-	.remove		= tristate_dev_remove,
-	.driver		= {
-		.name	= DRV_NAME,
+static struct platform_driver tristate_driver = {
+	.probe	= tristate_probe,
+	.driver	= {
+		.name	= DRIVER_NAME,
 		.owner	= THIS_MODULE,
-		.of_match_table = tristate_dev_of_match,
+		.of_match_table = tristate_of_match,
 	},
 };
-static int __init oem_tristate_init(void)
-{
-	return platform_driver_register(&tristate_dev_driver);
-}
-module_init(oem_tristate_init);
 
-static void __exit oem_tristate_exit(void)
+static int __init tristate_init(void)
 {
-	platform_driver_unregister(&tristate_dev_driver);
+	return platform_driver_register(&tristate_driver);
 }
-module_exit(oem_tristate_exit);
-MODULE_DESCRIPTION("oem tri_state_key driver");
-MODULE_LICENSE("GPL v2");
+device_initcall(tristate_init);
