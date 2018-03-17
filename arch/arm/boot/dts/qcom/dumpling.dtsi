@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -26,10 +26,10 @@
 			reg = <0 0xAC400000 0 0x00B00000>;
 			label = "mtp_mem";
 		};
-	bootloader_log_mem: bootloader_log_mem@9fff7000 {
-		reg = <0 0x9FFF7000 0 0x00100000>;
-		label = "bootloader_log_mem";
-	};
+		bootloader_log_mem: bootloader_log_mem@9fff7000 {
+			reg = <0 0x9FFF7000 0 0x00100000>;
+			label = "bootloader_log_mem";
+		};
 	};
 };
 
@@ -62,6 +62,7 @@
 	//increae 4M size by oneplus
 	reg = <0 0x8b200000 0 0x1e00000>;
 };
+
 /* I/O */
 &soc {
 	gpio_keys {
@@ -155,8 +156,7 @@
 		tristate,gpio_key2 = <&tlmm 42 0x00>;
 		tristate,gpio_key3 = <&tlmm 26 0x00>;
 
-		pinctrl-names = "pmx_tri_state_key_active",
-		"pmx_tri_state_key_suspend";
+		pinctrl-names = "pmx_tri_state_key_active", "pmx_tri_state_key_suspend";
 		pinctrl-0 = <&tri_state_key_active>;
 		pinctrl-1 = <&tri_state_key_suspend>;
 	};
@@ -165,8 +165,7 @@
 		compatible = "oem,rf_cable";
 		interrupt-parent = <&tlmm>;
 		rf,cable-gpio    = <&tlmm 36 0>;
-		pinctrl-names = "oem_rf_cable_active",
-		"oem_rf_cable_suspend";
+		pinctrl-names = "oem_rf_cable_active", "oem_rf_cable_suspend";
 		pinctrl-0 = <&oem_rf_cable_active >;
 		pinctrl-1 = <&oem_rf_cable_suspend>;
 	};
@@ -181,9 +180,9 @@
 		interrupt-parent = <&tlmm>;
 		fpc,irq-gpio    = <&tlmm 121 0>;
 		/*
-		*fpc,gpio_id0    = <&tlmm 39 0>;
-		*fpc,gpio_id1    = <&tlmm 41 0>;
-		*fpc,gpio_id2    = <&tlmm 63 0>;
+		fpc,gpio_id0    = <&tlmm 39 0>;
+		fpc,gpio_id1    = <&tlmm 41 0>;
+		fpc,gpio_id2    = <&tlmm 63 0>;
 		*/
 		oem,dumpling;
 	};
@@ -319,7 +318,6 @@
 			qcom,soc-low-threshold = <5>;
 		};
 	};
-
 	ramoops {
 		compatible = "ramoops";
 		status = "ok";
@@ -339,23 +337,19 @@
 				0xf0 0x23C
 				0x0f 0x240>;
 	};
-
 	force_enable_serial {
 		compatible = "oem,force_serial";
 	};
 	oem_serial_pinctrl {
 		compatible = "oem,oem_serial_pinctrl";
-		pinctrl-names = "uart_pinctrl_active",
-		"uart_pinctrl_deactive";
+		pinctrl-names = "uart_pinctrl_active", "uart_pinctrl_deactive";
 		pinctrl-0 = <&uart_console_active>;
 		pinctrl-1 = <&uart_console_deactive>;
 	};
-
 	bootloader_log {
 		compatible = "bootloader_log";
 		linux,contiguous-region = <&bootloader_log_mem>;
 	};
-
 };
 
 &pm8998_gpios {
@@ -385,7 +379,6 @@
 		qcom,out-strength = <1>;
 		status = "okay";
 	};
-
 };
 
 &sdhc_2 {
@@ -418,15 +411,15 @@
 			keypad-led-vbob-min = <3312000>;
 			keypad-led-vbob-max = <3600000>;
 			keypad-backlight {
-			//here maybe pm8998_gpios, depends on what you use.
-				gpios = <&pmi8998_gpios 5 0>;
+				gpios = <&pmi8998_gpios 5 0>; //here maybe pm8998_gpios, depends on what you use.
 				label = "button-backlight";
 				linux,default-trigger = "none";
 				default-state = "off";
 			};
 		};
 	};
-	//shankai@bsp, add debounce time 2017-3-18
+
+	/*shankai@bsp, add debounce time 2017-3-18*/
 	qcom,pm8998@0{
 		qcom,power-on@800 {
 		    qcom,pon-dbc-delay = <31250>;
@@ -478,9 +471,6 @@
 	qcom,pause-hi = <1000>;
 	/delete-property/ linux,default-trigger;
 };
-
-
-
 
 /* Charging */
 &soc {
@@ -544,7 +534,7 @@
 		pinctrl-2 =<&ap_data_active>;
 		pinctrl-3 =<&ap_data_suspend>;
 		clocks = <&clock_gcc clk_uart_snoc_msmbus_a_clk>,
-			 <&clock_gcc clk_uart_cnoc_msmbus_a_clk>;
+			<&clock_gcc clk_uart_cnoc_msmbus_a_clk>;
 		clock-names = "snoc", "cnoc";
 	};
 };
@@ -677,6 +667,7 @@
 	qcom,fg-rsense-sel = <0>;
 };
 
+/* Display */
 &i2c_5 {
 	synaptics@20 {
 		status = "disabled";
@@ -717,7 +708,6 @@
 	};
 };
 
-
 &mdss_dp_ctrl {
 	status = "disabled";
 };
@@ -749,17 +739,6 @@
 &snd_9335 {
 	qcom,mbhc-audio-jack-type = "4-pole-jack";
 };
-/* liuhaituo@MultiMediaAudio modified for adapation phone headset 2018/3/2 */
-/*
-&slim_aud {
-	tasha_codec {
-		qcom,cdc-micbias1-mv = <1800>;
-		qcom,cdc-micbias2-mv = <2700>;
-		qcom,cdc-micbias3-mv = <1800>;
-		qcom,cdc-micbias4-mv = <1800>;
-	};
-};
-*/
 
 /* Audio */
 &soc {
@@ -778,7 +757,7 @@
 	};
 
 	sound-9335 {
-	  op,project_17801;
+		op,project_17801;
 		qcom,audio-routing =
 			"AIF4 VI", "MCLK",
 			"RX_BIAS", "MCLK",
@@ -834,11 +813,11 @@
 	qcom,msm-mi2s-ext-mclk = <0>;
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&quat_mi2s_active
-	&quat_mi2s_sd0_active
-	&quat_mi2s_sd1_active>;
+			&quat_mi2s_sd0_active
+			&quat_mi2s_sd1_active>;
 	pinctrl-1 = <&quat_mi2s_sleep
-	&quat_mi2s_sd0_sleep
-	&quat_mi2s_sd1_sleep>;
+			&quat_mi2s_sd0_sleep
+			&quat_mi2s_sd1_sleep>;
 };
 
 &wcd_us_euro_gpio {
@@ -852,11 +831,9 @@
 &wcd_usbc_analog_en2n_gpio {
 	status = "disabled";
 };
-
 &clock_audio_lnbb {
 	status = "disabled";
 };
-
 
 /* Camera */
 &cci {
@@ -871,7 +848,6 @@
 	qcom,eeprom@2 {
 		status = "ok";
 	};
-
 };
 
 &firmware {
@@ -885,7 +861,7 @@
 
 			system {
 				compatible = "android,system";
-		dev = "/dev/block/platform/soc/1da4000.ufshc/by-name/system";
+				dev = "/dev/block/platform/soc/1da4000.ufshc/by-name/system";
 				type = "ext4";
 				mnt_flags = "ro,barrier=1,discard";
 				fsmgr_flags = "wait,verify";
@@ -894,6 +870,32 @@
 		};
 	};
 };
+
+/*Anderson-Config_UARTPIN_as_GPIO*[*/
+&soc {
+	tlmm: pinctrl@03400000 {
+		uart_console_deactive: uart_console_deactive {
+			mux {
+				pins = "gpio4", "gpio5";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio4", "gpio5";
+				drive-strength = <2>;
+				bias-pull-down;
+			};
+		};
+	};
+};
+
+&uartblsp2dm1 {
+	pinctrl-names = "uart_active", "uart_deactive";
+	pinctrl-0 = <&uart_console_active>;
+	pinctrl-1 = <&uart_console_deactive>;
+};
+/*Anderson-Config_UARTPIN_as_GPIO*]**/
+
 /* External Thermistors */
 &pm8998_vadc {
 	chan@4e {
@@ -997,38 +999,13 @@
 };
 /*  wangdongdong@MultiMediaService,2017/02/23,end  */
 
-/*Anderson-Config_UARTPIN_as_GPIO*[*/
-&soc {
-	tlmm: pinctrl@03400000 {
-		uart_console_deactive: uart_console_deactive {
-			mux {
-				pins = "gpio4", "gpio5";
-				function = "gpio";
-			};
-
-			config {
-				pins = "gpio4", "gpio5";
-				drive-strength = <2>;
-				bias-pull-down;
-			};
-		};
-	};
-};
-
-&uartblsp2dm1 {
-	pinctrl-names = "uart_active", "uart_deactive";
-	pinctrl-0 = <&uart_console_active>;
-	pinctrl-1 = <&uart_console_deactive>;
-};
-/*Anderson-Config_UARTPIN_as_GPIO*]**/
-
 /*pcie 0 don't used,gpio 37 will used in nfc.*/
 /*but gpio37 will request in pcie0. so disable it*/
 &pcie0 {
 	status = "disabled";
 };
 
-&i2c_6 {
+&i2c_6 { /* BLSP1 QUP6 (NFC) */
 	nq@28 {
 		status = "disabled";
 	};
@@ -1054,4 +1031,3 @@
 		clock-names = "ref_clk";
 	};
 };
-

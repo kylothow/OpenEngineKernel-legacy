@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -9,7 +9,6 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-
 
 #include "pxlw-iris-settings.dtsi"
 
@@ -302,11 +301,6 @@
 	};
 };
 
-
-
-
-
-
 &pm8998_gpios {
 	/* GPIO 5 for Vol- Key */
 	gpio@c400 {
@@ -426,39 +420,6 @@
 	qcom,pause-hi = <1000>;
 	/delete-property/ linux,default-trigger;
 };
-
-/* Charging */
-/*&soc {
-	tlmm: pinctrl@03400000 {
-		oneplus_fastchg {
-			usb_sw_active: usb_sw_active {
-				mux {
-					pins = "gpio15", "gpio16";
-					function = "gpio";
-				};
-
-				config {
-					pins = "gpio15", "gpio16";
-					drive-strength = <16>;
-					bias-pull-up;
-				};
-			};
-
-				usb_sw_suspend: usb_sw_suspend {
-					mux {
-						pins = "gpio15", "gpio16";
-						function = "gpio";
-					};
-
-					config {
-						pins = "gpio15", "gpio16";
-						drive-strength = <2>;
-						bias-disable;
-					};
-				};
-			};
-		};
-};*/
 
 /* Charging */
 &soc {
@@ -611,8 +572,8 @@
 };
 
 &pmi8998_charger {
- /*Set FCC MAX 500mA by default,FCC will*/
- /*be set again after check battery temperature*/
+	/*Set FCC MAX 500mA by default,FCC will*/
+	/* be set again after check battery temperature*/
 	qcom,fcc-max-ua = <500000>;
 	qcom,usb-icl-ua = <1800000>;
 	qcom,fv-max-uv = <4365000>;
@@ -654,7 +615,6 @@
 	oem,use_external_fg;
 	qcom,fg-rsense-sel = <0>;
 };
-
 
 /* Display */
 &i2c_5 {
@@ -832,26 +792,25 @@
 	};
 };
 
-
 &firmware {
-    android {
-        compatible = "android,firmware";
-        fstab {
-            compatible = "android,fstab";
-            vendor {
-                status = "disabled";
-            };
+	android {
+		compatible = "android,firmware";
+		fstab {
+			compatible = "android,fstab";
+			vendor {
+				status = "disabled";
+			};
 
-            system {
-                compatible = "android,system";
-                dev = "/dev/block/platform/soc/1da4000.ufshc/by-name/system";
-                type = "ext4";
-                mnt_flags = "ro,barrier=1,discard";
-                fsmgr_flags = "wait,verify";
-                status = "ok";
-            };
-        };
-    };
+			system {
+				compatible = "android,system";
+				dev = "/dev/block/platform/soc/1da4000.ufshc/by-name/system";
+				type = "ext4";
+				mnt_flags = "ro,barrier=1,discard";
+				fsmgr_flags = "wait,verify";
+				status = "ok";
+			};
+		};
+	};
 };
 
 /*Anderson-Config_UARTPIN_as_GPIO*[*/
