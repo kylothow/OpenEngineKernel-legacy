@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -17,7 +17,7 @@
 	mux {
 		pins = "gpio94", "gpio21", "gpio62";
 	};
-    config {
+	config {
 		pins = "gpio94", "gpio21", "gpio62";
 	};
 };
@@ -38,77 +38,75 @@
 	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
 	qcom,platform-reset-gpio = <&tlmm 94 0>;
 	qcom,platform-te-gpio = <&tlmm 11 0>;
-  qcom,platform-vci-gpio = <&tlmm 21 0>;
-  qcom,panel-mode-gpio = <>;
-  lab-supply = <>;
-  ibb-supply = <>;
+	qcom,platform-vci-gpio = <&tlmm 21 0>;
+	qcom,panel-mode-gpio = <>;
+	lab-supply = <>;
+	ibb-supply = <>;
 	clocks = <&clock_mmss clk_mmss_mdss_byte0_clk>,
-		<&clock_mmss clk_mmss_mdss_pclk0_clk>,
-		<&clock_mmss clk_mmss_mdss_esc0_clk>,
-		<&clock_mmss clk_byte0_clk_src>,
-		<&clock_mmss clk_pclk0_clk_src>,
-		<&clock_mmss clk_mmss_mdss_byte0_intf_clk>;
+			<&clock_mmss clk_mmss_mdss_pclk0_clk>,
+			<&clock_mmss clk_mmss_mdss_esc0_clk>,
+			<&clock_mmss clk_byte0_clk_src>,
+			<&clock_mmss clk_pclk0_clk_src>,
+			<&clock_mmss clk_mmss_mdss_byte0_intf_clk>;
 	clock-names = "byte_clk", "pixel_clk", "core_clk",
-		"byte_clk_rcg", "pixel_clk_rcg",
-		"byte_intf_clk";
+			"byte_clk_rcg", "pixel_clk_rcg",
+			"byte_intf_clk";
 };
 
 &dsi_samsung_s6e3fa5_1080p_cmd {
-  qcom,panel-supply-entries = <&dsi_panel_pwr_supply_no_labibb>;
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_no_labibb>;
 };
 
 &dsi_samsung_s6e3fa6_1080p_cmd {
-  qcom,panel-supply-entries = <&dsi_panel_pwr_supply_no_labibb>;
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_no_labibb>;
 };
-
 
 &soc {
-        tlmm: pinctrl@03400000 {
-                tri_state_key_mux {
-                        tri_state_key_active: tri_state_key_active {
-                                mux {
-                                        pins = "gpio42","gpio26","gpio40";
-                                        function = "gpio";
-                                };
+	tlmm: pinctrl@03400000 {
+		tri_state_key_mux {
+			tri_state_key_active: tri_state_key_active {
+				mux {
+					pins = "gpio42", "gpio26", "gpio40";
+					function = "gpio";
+				};
 
-                                config {
-                                        pins = "gpio42","gpio26","gpio40";
-                                        drive-strength = <2>;
-                                        bias-disable;
-                                };
-                        };
+				config {
+					pins = "gpio42", "gpio26", "gpio40";
+					drive-strength = <2>;
+					bias-disable;
+				};
+			};
 
-                        tri_state_key_suspend: tri_state_key_suspend {
-                                mux {
-                                        pins = "gpio42","gpio26","gpio40";
-                                        function = "gpio";
-                                };
+			tri_state_key_suspend: tri_state_key_suspend {
+				mux {
+					pins = "gpio42", "gpio26", "gpio40";
+					function = "gpio";
+				};
 
-                                config {
-                                        pins = "gpio42","gpio26","gpio40";
-                                        drive-strength = <2>;
-                                        bias-disable;
-                                };
-                        };
-                };
-        };
-        /* Tri-state key */
-        tri_state_key {
-                compatible = "oneplus,tri-state-key";
-                status = "okay";
-                interrupt-parent = <&tlmm>;
-                tristate,gpio_key1 = <&tlmm 40 0x00>;
-                tristate,gpio_key2 = <&tlmm 42 0x00>;
-                tristate,gpio_key3 = <&tlmm 26 0x00>;
+				config {
+					pins = "gpio42", "gpio26", "gpio40";
+					drive-strength = <2>;
+					bias-disable;
+				};
+			};
+		};
+	};
+	/* Tri-state key */
+	tri_state_key {
+		compatible = "oneplus,tri-state-key";
+		status = "okay";
+		interrupt-parent = <&tlmm>;
+		tristate,gpio_key1 = <&tlmm 40 0x00>;
+		tristate,gpio_key2 = <&tlmm 42 0x00>;
+		tristate,gpio_key3 = <&tlmm 26 0x00>;
 
-                pinctrl-names = "pmx_tri_state_key_active", "pmx_tri_state_key_suspend";
-                pinctrl-0 = <&tri_state_key_active>;
-                pinctrl-1 = <&tri_state_key_suspend>;
-        };
-
+		pinctrl-names = "pmx_tri_state_key_active", "pmx_tri_state_key_suspend";
+		pinctrl-0 = <&tri_state_key_active>;
+		pinctrl-1 = <&tri_state_key_suspend>;
+	};
 };
 
-//camera
+/* Camera */
 &soc {
 	tlmm: pinctrl@03400000 {
 		cam_sensor_rear_0_mclk_active: cam_sensor_rear_0_mclk_active {
@@ -144,12 +142,12 @@
 		cam_sensor_rear_0_active: cam_sensor_rear_0_active {
 			/* RESET, STANDBY */
 			mux {
-				pins = "gpio30","gpio7";
+				pins = "gpio30", "gpio7";
 				function = "gpio";
 			};
 
 			config {
-				pins = "gpio30","gpio7";
+				pins = "gpio30", "gpio7";
 				bias-disable; /* No PULL */
 				drive-strength = <2>; /* 2 MA */
 			};
@@ -158,12 +156,12 @@
 		cam_sensor_rear_0_suspend: cam_sensor_rear_0_suspend {
 			/* RESET, STANDBY */
 			mux {
-				pins = "gpio30","gpio7";
+				pins = "gpio30", "gpio7";
 				function = "gpio";
 			};
 
 			config {
-				pins = "gpio30","gpio7";
+				pins = "gpio30", "gpio7";
 				bias-disable; /* No PULL */
 				drive-strength = <2>; /* 2 MA */
 			};
@@ -258,12 +256,12 @@
 		cam_sensor_rear_1_active: cam_sensor_rear_1_active {
 			/* RESET, STANDBY */
 			mux {
-				pins = "gpio9","gpio8";
+				pins = "gpio9", "gpio8";
 				function = "gpio";
 			};
 
 			config {
-				pins = "gpio9","gpio8";
+				pins = "gpio9", "gpio8";
 				bias-disable; /* No PULL */
 				drive-strength = <2>; /* 2 MA */
 			};
@@ -272,11 +270,11 @@
 		cam_sensor_rear_1_suspend: cam_sensor_rear_1_suspend {
 			/* RESET, STANDBY */
 			mux {
-				pins = "gpio9","gpio8";
+				pins = "gpio9", "gpio8";
 				function = "gpio";
 			};
 			config {
-				pins = "gpio9","gpio8";
+				pins = "gpio9", "gpio8";
 				bias-disable; /* No PULL */
 				drive-strength = <2>; /* 2 MA */
 			};
@@ -503,7 +501,7 @@
 		cell-index = <0>;
 		reg = <0>;
 		compatible = "qcom,eeprom";
-//		qcom,eeprom-name = "sony_imx398";// eeprom will be probed in userspace
+		//qcom,eeprom-name = "sony_imx398"; // eeprom will be probed in userspace
 		position = <0x00>;
 		qcom,slave-addr = <0xa0>;
 		qcom,cci-master = <0>;
@@ -585,7 +583,7 @@
 		qcom,cam-power-seq-delay = <1>;
 
 		clocks = <&clock_mmss clk_mclk2_clk_src>,
-			<&clock_mmss clk_mmss_camss_mclk2_clk>;
+				<&clock_mmss clk_mmss_camss_mclk2_clk>;
 		clock-names = "cam_src_clk", "cam_clk";
 		qcom,clock-rates = <24000000 0>;
 		status = "ok";
@@ -595,7 +593,7 @@
 		cell-index = <1>;
 		reg = <0x1>;
 		compatible = "qcom,eeprom";
-		//qcom,eeprom-name = "sony_imx350";// eeprom will be probed in userspace
+		//qcom,eeprom-name = "sony_imx350"; // eeprom will be probed in userspace
 		position = <0x01>;
 		qcom,slave-addr = <0xa2>;
 		qcom,cci-master = <1>;
@@ -740,7 +738,7 @@
 		qcom,saddr22 = <0xa2>;
 		qcom,mem22 = <0x0100 0x1600 2 0 1 0>;
 
-		qcom,page23= <0 0x0000 2 0x00 1 5>;
+		qcom,page23 = <0 0x0000 2 0x00 1 5>;
 		qcom,pageen23 = <0 0x0000 2 0x00 1 5>;
 		qcom,poll23 = <0 0x0000 2 0x00 1 5>;
 		qcom,saddr23 = <0xa2>;
@@ -767,7 +765,7 @@
 		qcom,cam-power-seq-delay = <1>;
 
 		clocks = <&clock_mmss clk_mclk2_clk_src>,
-			<&clock_mmss clk_mmss_camss_mclk2_clk>;
+				<&clock_mmss clk_mmss_camss_mclk2_clk>;
 		clock-names = "cam_src_clk", "cam_clk";
 		qcom,clock-rates = <24000000 0>;
 		status = "ok";
@@ -777,7 +775,7 @@
 		cell-index = <2>;
 		reg = <0x2>;
 		compatible = "qcom,eeprom";
-		//qcom,eeprom-name = "sony_imx371";// eeprom will be probed in userspace
+		//qcom,eeprom-name = "sony_imx371"; // eeprom will be probed in userspace
 		position = <0x02>;
 		qcom,slave-addr = <0xa2>;
 		qcom,cci-master = <0>;
@@ -922,7 +920,7 @@
 		qcom,saddr22 = <0xa2>;
 		qcom,mem22 = <0x0100 0x1600 2 0 1 0>;
 
-		qcom,page23= <0 0x0000 2 0x00 1 5>;
+		qcom,page23 = <0 0x0000 2 0x00 1 5>;
 		qcom,pageen23 = <0 0x0000 2 0x00 1 5>;
 		qcom,poll23 = <0 0x0000 2 0x00 1 5>;
 		qcom,saddr23 = <0xa2>;
@@ -949,7 +947,7 @@
 		qcom,cam-power-seq-delay = <1>;
 
 		clocks = <&clock_mmss clk_mclk2_clk_src>,
-			<&clock_mmss clk_mmss_camss_mclk2_clk>;
+				<&clock_mmss clk_mmss_camss_mclk2_clk>;
 		clock-names = "cam_src_clk", "cam_clk";
 		qcom,clock-rates = <24000000 0>;
 		status = "ok";
@@ -969,25 +967,25 @@
 		cam_vaf-supply = <&pm8998_l22>;
 		cam_v_custom1-supply = <&pm8998_s3>;
 		qcom,cam-vreg-name = "cam_vio",
-		"cam_vana", "cam_vaf", "cam_vdig";
+				"cam_vana", "cam_vaf", "cam_vdig";
 		qcom,cam-vreg-min-voltage = <0 3312000 2864000 1352000>;
 		qcom,cam-vreg-max-voltage = <0 3600000 2864000 1352000>;
 		qcom,cam-vreg-op-mode = <0 3600000 2864000 1352000>;
 		qcom,gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_rear_0_mclk_active
-				 &cam_sensor_rear_0_active
-				 &cam_sensor_rear_0_ana_active
-				 &cam_sensor_rear_0_actuator_vaf_active>;
+				&cam_sensor_rear_0_active
+				&cam_sensor_rear_0_ana_active
+				&cam_sensor_rear_0_actuator_vaf_active>;
 		pinctrl-1 = <&cam_sensor_rear_0_mclk_suspend
-				 &cam_sensor_rear_0_suspend
-				 &cam_sensor_rear_0_ana_suspend
-				 &cam_sensor_rear_0_actuator_vaf_suspend>;
+				&cam_sensor_rear_0_suspend
+				&cam_sensor_rear_0_ana_suspend
+				&cam_sensor_rear_0_actuator_vaf_suspend>;
 		gpios = <&tlmm 13 0>, // mclk
-			<&tlmm 30 0>, // reset
-			<&tlmm 7 0>, // digital enable
-			<&tlmm 27 0>, // ana enable
-			<&tlmm 6 0>; // AF enable
+				<&tlmm 30 0>, // reset
+				<&tlmm 7 0>, // digital enable
+				<&tlmm 27 0>, // ana enable
+				<&tlmm 6 0>; // AF enable
 		qcom,gpio-reset = <1>;
 		qcom,gpio-vdig = <2>;
 		qcom,gpio-vana = <3>;
@@ -995,10 +993,10 @@
 		qcom,gpio-req-tbl-num = <0 1 2 3 4>;
 		qcom,gpio-req-tbl-flags = <1 0 0 0 0>;
 		qcom,gpio-req-tbl-label = "CAMIF_MCLK_0",
-					"CAM_RESET_0",
-					"CAM_VDIG_0",
-					"CAM_VANA_0",
-					"CAM_AF_EN_0";
+				"CAM_RESET_0",
+				"CAM_VDIG_0",
+				"CAM_VANA_0",
+				"CAM_AF_EN_0";
 		qcom,sensor-position = <0>;
 		qcom,sensor-mode = <0>;
 		qcom,cci-master = <0>;
@@ -1024,25 +1022,25 @@
 		cam_vaf-supply = <&pmi8998_bob>;
 		cam_v_custom1-supply = <&pm8998_s3>;
 		qcom,cam-vreg-name = "cam_vio",
-		"cam_vana", "cam_vaf", "cam_vdig";
+				"cam_vana", "cam_vaf", "cam_vdig";
 		qcom,cam-vreg-min-voltage = <0 3312000 3312000 1352000>;
 		qcom,cam-vreg-max-voltage = <0 3600000 3600000 1352000>;
 		qcom,cam-vreg-op-mode = <0 3600000 3600000 1352000>;
 		qcom,gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_rear_1_mclk_active
-				 &cam_sensor_rear_1_active
-				 &cam_sensor_rear_1_ana_active
-				 &cam_sensor_rear_1_vaf_active>;
+				&cam_sensor_rear_1_active
+				&cam_sensor_rear_1_ana_active
+				&cam_sensor_rear_1_vaf_active>;
 		pinctrl-1 = <&cam_sensor_rear_1_mclk_suspend
-				 &cam_sensor_rear_1_suspend
-				 &cam_sensor_rear_1_ana_suspend
-				 &cam_sensor_rear_1_vaf_suspend>;
+				&cam_sensor_rear_1_suspend
+				&cam_sensor_rear_1_ana_suspend
+				&cam_sensor_rear_1_vaf_suspend>;
 		gpios = <&tlmm 15 0>, // mclk
-			<&tlmm 9 0>, // reset
-			<&tlmm 8 0>, // digital enable
-			<&tlmm 23 0>, // ana enable
-			<&tlmm 77 0>; // AF enable
+				<&tlmm 9 0>, // reset
+				<&tlmm 8 0>, // digital enable
+				<&tlmm 23 0>, // ana enable
+				<&tlmm 77 0>; // AF enable
 		qcom,gpio-reset = <1>;
 		qcom,gpio-vdig = <2>;
 		qcom,gpio-vana = <3>;
@@ -1050,16 +1048,16 @@
 		qcom,gpio-req-tbl-num = <0 1 2 3 4>;
 		qcom,gpio-req-tbl-flags = <1 0 0 0 0>;
 		qcom,gpio-req-tbl-label = "CAMIF_MCLK_1",
-					"CAM_RESET_1",
-					"CAM_VDIG_1",
-					"CAM_VANA_1",
-					"CAM_AF_EN_1";
+				"CAM_RESET_1",
+				"CAM_VDIG_1",
+				"CAM_VANA_1",
+				"CAM_AF_EN_1";
 		qcom,sensor-position = <0>;
 		qcom,sensor-mode = <0>;
 		qcom,cci-master = <1>;
 		status = "ok";
 		clocks = <&clock_mmss clk_mclk2_clk_src>,
-			<&clock_mmss clk_mmss_camss_mclk2_clk>;
+				<&clock_mmss clk_mmss_camss_mclk2_clk>;
 		clock-names = "cam_src_clk", "cam_clk";
 		qcom,clock-rates = <24000000 0>;
 	};
@@ -1082,34 +1080,35 @@
 		qcom,gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_front_0_mclk_active
-				 &cam_sensor_front_0_active
-				 &cam_sensor_front_0_ana_active>;
+				&cam_sensor_front_0_active
+				&cam_sensor_front_0_ana_active>;
 		pinctrl-1 = <&cam_sensor_front_0_mclk_suspend
-				 &cam_sensor_front_0_suspend
-				 &cam_sensor_front_0_ana_suspend>;
-		gpios = <&tlmm 14 0>,// mclk
-			<&tlmm 28 0>,// reset
-			<&tlmm 78 0>,// vdig enable
-			<&tlmm 85 0>;// vana enable
+				&cam_sensor_front_0_suspend
+				&cam_sensor_front_0_ana_suspend>;
+		gpios = <&tlmm 14 0>, // mclk
+				<&tlmm 28 0>, // reset
+				<&tlmm 78 0>, // vdig enable
+				<&tlmm 85 0>; // vana enable
 		qcom,gpio-reset = <1>;
 		qcom,gpio-vdig = <2>;
 		qcom,gpio-vana = <3>;
 		qcom,gpio-req-tbl-num = <0 1 2 3>;
 		qcom,gpio-req-tbl-flags = <1 0 0 0>;
 		qcom,gpio-req-tbl-label = "CAMIF_MCLK_2",
-					  "CAM_RESET_2",
-					  "CAM_VDIG_2",
-					  "CAM_VANA_2";
+				"CAM_RESET_2",
+				"CAM_VDIG_2",
+				"CAM_VANA_2";
 		qcom,sensor-position = <1>;
 		qcom,sensor-mode = <0>;
 		qcom,cci-master = <0>;
 		status = "ok";
 		clocks = <&clock_mmss clk_mclk1_clk_src>,
-			<&clock_mmss clk_mmss_camss_mclk1_clk>;
+				<&clock_mmss clk_mmss_camss_mclk1_clk>;
 		clock-names = "cam_src_clk", "cam_clk";
 		qcom,clock-rates = <24000000 0>;
 	};
 };
+
 &pm8998_gpios {
 	gpio@c800 { /* GPIO 9 - CAMERA SENSOR 2 VDIG */
 		qcom,mode = <1>;		/* Output */
@@ -1131,8 +1130,8 @@
 		status = "ok";
 	};
 };
+
 &wsa_spkr_sd2 {
 	pinctrl-0 = <>;
 	pinctrl-1 = <>;
 };
-
