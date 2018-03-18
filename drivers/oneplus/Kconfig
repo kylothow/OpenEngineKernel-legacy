@@ -1,6 +1,6 @@
 config OEM_DEBUG_SUPPORT
-        bool
-        default y
+	bool
+	default y
 
 config OEM_TRACE_SUPPORT
 	default y
@@ -12,5 +12,4 @@ config OEM_SYSRQ_X
 	depends on OEM_DEBUG_SUPPORT
 	bool "echo x > /proc/sysrq-trigger to get init process stacktrace"
 
-source "drivers/oneplus/coretech/Kconfig"
 source "drivers/oneplus/coretech/Kconfig"
