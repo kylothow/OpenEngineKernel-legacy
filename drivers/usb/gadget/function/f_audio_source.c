@@ -616,7 +616,7 @@ static int audio_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
 * Because the data interface supports multiple altsettings,
 * this audio_source function *MUST* implement a get_alt() method.
 */
-static int audio_get_alt(struct usb_function *f, unsigned intf)
+static int audio_get_alt(struct usb_function *f, unsigned int intf)
 {
 	struct audio_dev	*audio = func_to_audio(f);
 
