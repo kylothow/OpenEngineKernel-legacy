@@ -1,0 +1,11 @@
+menu "OnePlus specific device drivers"
+	depends on ARCH_QCOM
+
+config BOARD_DUMPLING
+	bool "OnePlus 5T device support"
+	depends on ARCH_MSM8998
+	default n
+	help
+	 Say 'y' here to include OnePlus 5T only modifications.
+
+endmenu
